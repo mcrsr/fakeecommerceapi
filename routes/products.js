@@ -3,7 +3,6 @@ const db = require('../db/database');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { body, param, validationResult } = require('express-validator');
 
 const { authenticateToken, authorizeAdmin } = require('../middlewares/auth');
 
@@ -39,21 +38,6 @@ const upload = multer({
 }).single('image');
 
 
-// Middleware for validating product creation
-const validateProduct = [
-    body('title').isString().notEmpty().withMessage('Title must be a non-empty string'),
-    body('price').isNumeric().withMessage('Price must be a number'),
-    body('description').isString().notEmpty().withMessage('Description must be a non-empty string'),
-    body('category_id').isInt().withMessage('Category ID must be an integer'),
-    (req, res, next) => {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(400).json({ errors: errors.array() });
-        }
-        next();
-    }
-];
-
 // Get all products
 router.get('/', (req, res) => {
     db.all(`SELECT * FROM products`, [], (err, rows) => {
@@ -77,7 +61,7 @@ router.get('/:productId', (req, res) => {
 });
 
 // Create a product (requires admin)
-router.post('/', authenticateToken, authorizeAdmin,validateProduct, (req, res) => {
+router.post('/', authenticateToken, authorizeAdmin, (req, res) => {
     upload(req, res, (err) => {
         if (err instanceof multer.MulterError) {
             // Handle Multer errors
@@ -95,20 +79,6 @@ router.post('/', authenticateToken, authorizeAdmin,validateProduct, (req, res) =
 
         // Destructure the fields from req.body
         const { title, price, description, category_id } = req.body;
-
-        if (typeof title !== 'string' || title.trim() === '') {
-            return res.status(400).json({ error: 'Title must be a non-empty string' });
-        }
-        if (typeof price !== 'number' || isNaN(price)) {
-            return res.status(400).json({ error: 'Price must be a number' });
-        }
-        if (typeof description !== 'string' || description.trim() === '') {
-            return res.status(400).json({ error: 'Description must be a non-empty string' });
-        }
-        if (!Number.isInteger(category_id)) {
-            return res.status(400).json({ error: 'Category ID must be an integer' });
-        }
-
         const image = req.file ? req.file.path : null;
 
         // Basic validation
