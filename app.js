@@ -18,7 +18,6 @@ const limiter = rateLimit({
 	legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 })
 
-app.use(limiter)
 
 const app = express();
 app.use(bodyParser.json());
@@ -28,6 +27,8 @@ app.use('/uploads', express.static('uploads'));
 
 // app.use(morgan(':method :url :status :res[content-length] - :response-time ms'));
 app.use(morgan('combined'));
+
+app.use(limiter)
 
 // Middleware to check Accept header
 app.use((req, res, next) => {
