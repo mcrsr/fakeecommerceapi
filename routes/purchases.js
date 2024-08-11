@@ -8,7 +8,6 @@ const router = express.Router();
 // Middleware for validating purchase request payload
 const validatePurchase = [
     body('quantity').isInt({ min: 1 }).withMessage('Quantity must be a positive integer'),
-    body('productId').isInt().withMessage('Product ID must be an integer'),
     (req, res, next) => {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
