@@ -5,6 +5,26 @@ const { body, validationResult } = require('express-validator');
 
 const router = express.Router();
 
+// Utility function to query the database
+const queryDB = (sql, params = []) => {
+    return new Promise((resolve, reject) => {
+        db.all(sql, params, (err, rows) => {
+            if (err) reject(err);
+            else resolve(rows);
+        });
+    });
+};
+
+// Utility function to run a database command (e.g., UPDATE, DELETE)
+const runDB = (sql, params = []) => {
+    return new Promise((resolve, reject) => {
+        db.run(sql, params, function(err) {
+            if (err) reject(err);
+            else resolve(this);
+        });
+    });
+};
+
 // Middleware for validating purchase request payload
 const validatePurchase = [
     body('quantity').isInt({ min: 1 }).withMessage('Quantity must be a positive integer'),
@@ -18,164 +38,113 @@ const validatePurchase = [
 ];
 
 // Purchase product by productId
-router.post('/:productId', authenticateToken,validatePurchase, async (req, res) => {
+router.post('/:productId', authenticateToken, validatePurchase, async (req, res) => {
     try {
-        const userId = req.user.id;
+        const userId = req.user?.id;
+        if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
         const { productId } = req.params;
         const { quantity } = req.body;
 
-        // Check if the cart exists for the user
-        const carts = await new Promise((resolve, reject) => {
-            db.all(`SELECT * FROM carts WHERE user_id=?`, [userId], (err, rows) => {
-                if (err) reject(err);
-                else resolve(rows);
-            });
-        });
+        // Transaction start
+        await runDB('BEGIN TRANSACTION');
 
-        if (!carts || carts.length === 0) {
-            return res.status(404).json({ "error": "Cart not found!" });
-        }
+        const carts = await queryDB('SELECT * FROM carts WHERE user_id=?', [userId]);
+        if (!carts.length) return res.status(404).json({ error: "Cart not found!" });
 
-        // Check if the product exists
-        const products = await new Promise((resolve, reject) => {
-            db.all(`SELECT * FROM products WHERE id=?`, [productId], (err, rows) => {
-                if (err) reject(err);
-                else resolve(rows);
-            });
-        });
+        const products = await queryDB('SELECT * FROM products WHERE id=?', [productId]);
+        if (!products.length) return res.status(404).json({ error: "Product not found!" });
 
-        if (!products || products.length === 0) {
-            return res.status(404).json({ "error": "Product not found!" });
-        }
-
-        // Check if the product is available in the inventory
-        const inventory = await new Promise((resolve, reject) => {
-            db.all(`SELECT * FROM inventory WHERE product_id=?`, [productId], (err, rows) => {
-                if (err) reject(err);
-                else resolve(rows);
-            });
-        });
-
-        if (!inventory || inventory.length === 0) {
-            return res.status(404).json({ "error": "Product not found!" });
-        }
+        const inventory = await queryDB('SELECT * FROM inventory WHERE product_id=?', [productId]);
+        if (!inventory.length) return res.status(404).json({ error: "Product not found in inventory!" });
 
         const availableStock = inventory[0].stock;
         if (availableStock < quantity) {
             return res.status(409).json({
-                "error": "Requested quantity not available",
-                "availableQuantity": availableStock
+                error: "Requested quantity not available",
+                availableQuantity: availableStock
             });
         }
 
-        // Update the inventory to reduce the stock
-        await new Promise((resolve, reject) => {
-            db.run(`UPDATE inventory SET stock=? WHERE product_id=?`, [availableStock - quantity, productId], function (err) {
-                if (err) reject(err);
-                else resolve();
-            });
-        });
+        await runDB('UPDATE inventory SET stock=? WHERE product_id=?', [availableStock - quantity, productId]);
 
-        // Calculate total price
-        const priceOfTheEachProduct = products[0].price;
-        const totalPriceOfTheProducts = priceOfTheEachProduct * quantity;
-
-        // Prepare the data for the response
+        const totalPrice = products[0].price * quantity;
         const data = {
             "product title": products[0].title,
             "quantity": quantity,
-            "total price": totalPriceOfTheProducts
+            "total price": totalPrice
         };
 
-        // Send the response
+        // Remove the purchased item from the cart
+        await runDB('DELETE FROM cart_items WHERE cart_id=? AND product_id=?', [carts[0].id, productId]);
+
+        // Transaction commit
+        await runDB('COMMIT');
+
         return res.status(200).json({
-            "message": "Thank you for purchasing. Please check the products before proceeding.",
-            "data": data
+            message: "Thank you for purchasing. Please check the products before proceeding.",
+            data: data
         });
 
     } catch (error) {
+        await runDB('ROLLBACK');
         return res.status(500).json({ error: error.message });
     }
 });
 
-
 // Purchase all the products from the cart
 router.post('/', authenticateToken, async (req, res) => {
     try {
-        const userId = req.user.id;
-        const carts = await new Promise((resolve, reject) => {
-            db.all(`SELECT * FROM carts WHERE user_id=?`, [userId], (err, rows) => {
-                if (err) reject(err);
-                else resolve(rows);
-            });
-        });
+        const userId = req.user?.id;
+        if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-        if (!carts || carts.length === 0) {
-            return res.status(404).json({ "error": "Cart not found!" });
-        }
+        const carts = await queryDB('SELECT * FROM carts WHERE user_id=?', [userId]);
+        if (!carts.length) return res.status(404).json({ error: "Cart not found!" });
 
-        const cartItems = await new Promise((resolve, reject) => {
-            db.all(`SELECT * FROM cart_items WHERE cart_id=?`, [carts[0].id], (err, rows) => {
-                if (err) reject(err);
-                else resolve(rows);
-            });
-        });
+        const cartItems = await queryDB('SELECT * FROM cart_items WHERE cart_id=?', [carts[0].id]);
+        if (!cartItems.length) return res.status(404).json({ error: "No products available in the cart!" });
 
-        if (!cartItems || cartItems.length === 0) {
-            return res.status(404).json({ "error": "No products available in the cart!" });
-        }
+        // Transaction start
+        await runDB('BEGIN TRANSACTION');
 
         const data = [];
         for (const cartItem of cartItems) {
             const { product_id: productId, quantity } = cartItem;
 
-            const inventoryRows = await new Promise((resolve, reject) => {
-                db.all(`SELECT * FROM inventory WHERE product_id=?`, [productId], (err, rows) => {
-                    if (err) reject(err);
-                    else resolve(rows);
-                });
-            });
-
-            if (!inventoryRows || inventoryRows.length === 0) {
-                return res.status(404).json({ "error": "Product not found!" });
-            }
+            const inventoryRows = await queryDB('SELECT * FROM inventory WHERE product_id=?', [productId]);
+            if (!inventoryRows.length) return res.status(404).json({ error: "Product not found in inventory!" });
 
             const availableStock = inventoryRows[0].stock;
             if (availableStock < quantity) {
                 return res.status(409).json({
-                    "error": "Requested quantity not available",
-                    "availableQuantity": availableStock
+                    error: "Requested quantity not available",
+                    availableQuantity: availableStock
                 });
             }
 
-            await new Promise((resolve, reject) => {
-                db.run(`UPDATE inventory SET stock=? WHERE product_id=?`, [availableStock - quantity, productId], (err) => {
-                    if (err) reject(err);
-                    else resolve();
-                });
-            });
+            await runDB('UPDATE inventory SET stock=? WHERE product_id=?', [availableStock - quantity, productId]);
 
-            const productRows = await new Promise((resolve, reject) => {
-                db.all(`SELECT * FROM products WHERE id=?`, [productId], (err, rows) => {
-                    if (err) reject(err);
-                    else resolve(rows);
-                });
-            });
-
+            const productRows = await queryDB('SELECT * FROM products WHERE id=?', [productId]);
             const { title, price } = productRows[0];
             const totalPrice = price * quantity;
             data.push({ "product title": title, "quantity": quantity, "total price": totalPrice });
+
+            // Remove the purchased item from the cart
+            await runDB('DELETE FROM cart_items WHERE cart_id=? AND product_id=?', [carts[0].id, productId]);
         }
 
+        // Transaction commit
+        await runDB('COMMIT');
+
         return res.status(200).json({
-            "message": "Thank you for purchasing. Please check the products before proceeding.",
-            "data": data
+            message: "Thank you for purchasing. Please check the products before proceeding.",
+            data: data
         });
 
     } catch (error) {
+        await runDB('ROLLBACK');
         return res.status(500).json({ error: error.message });
     }
 });
-
 
 module.exports = router;
