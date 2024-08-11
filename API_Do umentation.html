@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Documentation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            width: 80%;
+            margin: auto;
+            overflow: hidden;
+        }
+        header {
+            background: #333;
+            color: #fff;
+            padding-top: 10px;
+            min-height: 70px;
+            border-bottom: #ccc 3px solid;
+            margin-bottom: 20px;
+        }
+        header h1 {
+            text-align: center;
+            text-transform: uppercase;
+            margin: 0;
+        }
+        .content {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #333;
+            border-bottom: 2px solid #f4f4f4;
+            padding-bottom: 5px;
+        }
+        h3 {
+            color: #555;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 5px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background: #333;
+            color: #fff;
+        }
+        tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+        .error {
+            color: red;
+        }
+        .success {
+            color: green;
+        }
+        .note {
+            background: #e7f0e7;
+            padding: 10px;
+            border-left: 5px solid #4CAF50;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="container">
+        <h1>API Documentation</h1>
+    </div>
+</header>
+
+<div class="container">
+    <div class="content">
+
+        <h2>Base URL</h2>
+        <pre><code>http://localhost:3000</code></pre>
+
+        <h2>1. Authentication Routes</h2>
+
+        <h3>POST /auth/login</h3>
+        <p><strong>Description:</strong> Authenticates a user and returns a JWT token.</p>
+        <p><strong>Request:</strong></p>
+        <pre><code>
+{
+  "username": "string",
+  "password": "string"
+}
+        </code></pre>
+        <p><strong>Response:</strong></p>
+        <div class="success">
+            <pre><code>
+{
+  "token": "string"
+}
+            </code></pre>
+        </div>
+        <div class="error">
+            <pre><code>
+{
+  "error": "Invalid credentials"
+}
+            </code></pre>
+        </div>
+
+        <h2>2. Categories Routes</h2>
+
+        <h3>GET /categories</h3>
+        <p><strong>Description:</strong> Retrieves a list of all categories.</p>
+        <p><strong>Response:</strong></p>
+        <pre><code>
+[
+  {
+    "id": "integer",
+    "name": "string"
+  }
+]
+        </code></pre>
+
+        <h3>GET /categories/:categoryId</h3>
+        <p><strong>Description:</strong> Retrieves a specific category by its ID.</p>
+        <p><strong>Request:</strong></p>
+        <pre><code>
+{
+  "categoryId": "integer"
+}
+        </code></pre>
+        <p><strong>Response:</strong></p>
+        <pre><code>
+{
+  "id": "integer",
+  "name": "string"
+}
+        </code></pre>
+        <div class="error">
+            <pre><code>
+{
+  "error": "Category not found"
+}
+            </code></pre>
+        </div>
+
+        <h3>POST /categories</h3>
+        <p><strong>Description:</strong> Creates a new category (requires admin authentication).</p>
+        <p><strong>Request:</strong></p>
+        <pre><code>
+{
+  "name": "string"
+}
+        </code></pre>
+        <p><strong>Response:</strong></p>
+        <div class="success">
+            <pre><code>
+{
+  "id": "integer"
+}
+            </code></pre>
+        </div>
+        <div class="error">
+            <pre><code>
+{
+  "error": "Required field name is missing"
+}
+            </code></pre>
+        </div>
+
+        <h3>PUT /categories/:categoryId</h3>
+        <p><strong>Description:</strong> Updates an existing category by its ID (requires admin authentication).</p>
+        <p><strong>Request:</strong></p>
+        <pre><code>
+{
+  "name": "string"
+}
+        </code></pre>
+        <p><strong>Response:</strong></p>
+        <div class="success">
+            <pre><code>
+{
+  "id": "integer"
+}
+            </code></pre>
+        </div>
+        <div class="error">
+            <pre><code>
+{
+  "error": "Required field name is missing"
+}
+            </code></pre>
+        </div>
+
+        <h3>DELETE /categories/:categoryId</h3>
+        <p><strong>Description:</strong> Deletes a category by its ID (requires admin authentication).</p>
+        <p><strong>Request:</strong></p>
+        <pre><code>
+{
+  "categoryId": "integer"
+}
+        </code></pre>
+        <p><strong>Response:</strong></p>
+        <div class="success">
+            <pre><code>
+{
+  "message": "Category deleted successfully"
+}
+            </code></pre>
+        </div>
+        <div class="error">
+            <pre><code>
+{
+  "error": "Category not found"
+}
+            </code></pre>
+        </div>
+
+        <h2>3. Products Routes</h2>
+
+        <h3>GET /products</h3>
+        <p><strong>Description:</strong> Retrieves a list of all products.</p>
+        <p><strong>Response:</strong></p>
+        <pre><code>
+[
+  {
+    "id": "integer",
+    "title": "string",
+    "price": "number",
+    "description": "string",
+    "category_id": "integer",
+    "image": "string (URL)"
+  }
+]
+        </code></pre>
+
+        <h3>GET /products/:productId</h3>
+        <p><strong>Description:</strong> Retrieves a specific product by its ID.</p>
+        <p><strong>Request:</strong></p>
+        <pre><code>
+{
+  "productId": "integer"
+}
+        </code></pre>
+        <p><strong>Response:</strong></p>
+        <pre><code>
+{
+  "id": "integer",
+  "title": "string",
+  "price": "number",
+  "description": "string",
+  "category_id": "integer",
+  "image": "string (URL)"
+}
+        </code></pre>
+        <div class="error">
+            <pre><code>
+{
+  "error": "Product not found"
+}
+            </code></pre>
+        </div>
+
+        <h3>POST /products</h3>
+        <p><strong>Description:</strong> Creates a new product (requires admin authentication). Supports file upload for the product image.</p>
+        <p><strong>Request:</strong></p>
+        <pre><code>
+{
+  "title": "string",
+  "price": "number",
+  "description": "string",
+  "category_id": "integer"
+}
+        </code></pre>
+        <p><strong>Form Data:</strong></p>
+        <pre><code>
+File field: image (optional)
+        </code></pre>
+        <p><strong>Response:</strong></p>
+        <div class="success">
+            <pre><code>
+{
+  "message": "Product successfully created.",
+  "product": {
+    "id": "integer",
+    "title": "string",
+    "price": "number",
+    "description": "string",
+    "category_id": "integer",
+    "image": "string (URL)"
+  }
+}
+            </code></pre>
+        </div>
+        <div class="error">
+            <pre><code>
+{
+  "error": "All fields are required"
+}
+            </code></pre>
+        </div>
+
+        <h3>PUT /products/:productId</h3>
+        <p><strong>Description:</strong> Updates an existing product by its ID (requires admin authentication). Supports file upload for the product image.</p>
+        <p><strong>Request:</strong></p>
+        <pre><code>
+{
+  "title": "string",
+  "price": "number",
+  "description": "string",
+  "category_id": "integer"
+}
+        </code></pre>
+        <p><strong>Form Data:</strong></p>
+        <pre><code>
+File field: image (optional)
+        </code></pre>
+        <p><strong>Response:</strong></p>
+        <div class="success">
+            <pre><code>
+{
+  "message": "Product successfully updated.",
+  "product": {
+    "id": "integer",
+    "title": "string",
+    "price": "number",
+    "description": "string",
+    "category_id": "integer",
+    "image": "string (URL)"
+  }
+}
+            </code></pre>
+        </div>
+        <div class="error">
+            <pre><code>
+{
+  "error": "All fields are required"
+}
+            </code></pre>
+        </div>
+
+        <h3>DELETE /products/:productId</h3>
+        <p><strong>Description:</strong> Deletes a product by its ID (requires admin authentication).</p>
+        <p><strong>Request:</strong></p>
+        <pre><code>
+{
+  "productId": "integer"
+}
+        </code></pre>
+        <p><strong>Response:</strong></p>
+        <div class="success">
+            <pre><code>
+{
+  "message": "Product deleted successfully"
+}
+            </code></pre>
+        </div>
+        <div class="error">
+            <pre><code>
+{
+  "error": "Product not found"
+}
+            </code></pre>
+        </div>
+
+        <h2>4. Inventory Routes</h2>
+
+        <h3>GET /inventory</h3>
+        <p><strong>Description:</strong> Retrieves a list of all inventory items.</p>
+        <p><strong>Response:</strong></p>
+        <pre><code>
+[
+  {
+    "product_id": "integer",
+    "stock": "integer"
+  }
+]
+        </code></pre>
+
+        <h2>5. Cart Routes</h2>
+
+        <h3>GET /carts</h3>
+        <p><strong>Description:</strong> Retrieves the cart for the authenticated user.</p>
+        <p><strong>Response:</strong></p>
+        <pre><code>
+{
+  "id": "integer",
+  "user_id": "integer"
+}
+        </code></pre>
+        <div class="error">
+            <pre><code>
+{
+  "error": "Cart not found!"
+}
+            </code></pre>
+        </div>
+
+        <h2>6. Purchases Routes</h2>
+
+        <h3>POST /purchases/:productId</h3>
+        <p><strong>Description:</strong> Purchases a specific product by its ID (requires authentication).</p>
+        <p><strong>Request:</strong></p>
+        <pre><code>
+{
+  "quantity": "integer"
+}
+        </code></pre>
+        <p><strong>Response:</strong></p>
+        <div class="success">
+            <pre><code>
+{
+  "message": "Thank you for purchasing. Please check the products before proceeding.",
+  "data": {
+    "product title": "string",
+    "quantity": "integer",
+    "total price": "number"
+  }
+}
+            </code></pre>
+        </div>
+        <div class="error">
+            <pre><code>
+{
+  "error": "Requested quantity not available",
+  "availableQuantity": "integer"
+}
+            </code></pre>
+        </div>
+
+        <h3>POST /purchases</h3>
+        <p><strong>Description:</strong> Purchases all products in the user's cart (requires authentication).</p>
+        <p><strong>Response:</strong></p>
+        <div class="success">
+            <pre><code>
+{
+  "message": "Thank you for purchasing. Please check the products before proceeding.",
+  "data": [
+    {
+      "product title": "string",
+      "quantity": "integer",
+      "total price": "number"
+    }
+  ]
+}
+            </code></pre>
+        </div>
+        <div class="error">
+            <pre><code>
+{
+  "error": "Cart not found or no products in cart"
+}
+            </code></pre>
+        </div>
+        <div class="error">
+            <pre><code>
+{
+  "error": "Requested quantity not available",
+  "availableQuantity": "integer"
+}
+            </code></pre>
+        </div>
+
+        <h2>7. Users Routes</h2>
+
+        <h3>GET /users</h3>
+        <p><strong>Description:</strong> Retrieves a list of all users (requires admin authentication).</p>
+        <p><strong>Response:</strong></p>
+        <pre><code>
+[
+  {
+    "id": "integer",
+    "username": "string",
+    "email": "string"
+  }
+]
+        </code></pre>
+
+    </div>
+</div>
+
+</body>
+</html>
